@@ -35,6 +35,40 @@ after Scraperwiki's Python C<dumptruck> module. It allows for easy (and maybe
 inefficient) storage and retrieval of structured data to and from a database
 without interfacing with SQL.
 
+L<Database::DumpTruck> attempts to identify the type of the data you're inserting and uses an appropriate SQLite type:
+
+=over 4
+
+=item C<integer>
+
+This is used for integer values. Will be used for C<8086>, but not C<"8086"> or
+C<8086.0>.
+
+=item C<real>
+
+This is used for numeric values that are not integer. Will be used for
+C<8086.0>, but not C<"8086"> or C<8086>.
+
+=item C<bool>
+
+This is used for values that look like result of logical statemen. A crude
+check for values that are both C<""> and C<0> or both C<"1"> and C<1> at the
+same time is in place. This is a result of comparison or a negation.
+
+To force a value to look like boolean, prepend it with a double negation: e.g.
+C<!!0> or C<!!1>.
+
+=item C<json text>
+
+Used for C<ARRAY> and C<HASH> references. Values are converted into and from
+JSON strings upon C<insert> and C<dump>.
+
+=item C<text>
+
+Pretty much everything else.
+
+=back
+
 =cut
 
 use strict;
@@ -64,12 +98,12 @@ sub get_column_type
 	my $flags = $obj->FLAGS;
 
 	# Could here be a better way to detect a boolean?
-	if (($flags & (B::SVf_IOK | B::SVf_NOK | B::SVf_POK))
-		== (B::SVf_IOK | B::SVf_NOK | B::SVf_POK))
+	if (($flags & (B::SVf_NOK | B::SVf_POK))
+		== (B::SVf_NOK | B::SVf_POK))
 	{
 		return 'bool'
-			if ($obj->IV == 0 && $obj->NV == 0 && $obj->PV eq '')
-			or ($obj->IV == 1 && $obj->NV == 1 && $obj->PV eq '1');
+			if ($obj->NV == 0 && $obj->PV eq '')
+			or ($obj->NV == 1 && $obj->PV eq '1');
 	}
 
 	return 'text' if $flags & B::SVf_POK;
@@ -204,7 +238,7 @@ sub execute
 
 		foreach (0..$#$row) {
 			my $data = $row->[$_];
-			$data = decode_json ($data) if $types->[$_] eq 'json text';
+			$data = decode_json ($data) if $data and $types->[$_] eq 'json text';
 			$retval[$#retval]->{$names->[$_]} = $data;
 		}
 	};
@@ -512,7 +546,9 @@ sub drop
 
 =head1 BUGS
 
-None know.
+We make use of C<AutoCommit> in L<DBI>, which does not work properly with 
+L<DBD::SQLite> locking on BSDs. Set C<auto_commit> to 0 there and call
+C<commit> explicitely, or avoid BSDs.
 
 =head1 SEE ALSO
 
