@@ -80,7 +80,7 @@ use B;
 use JSON;
 require DBD::SQLite;
 
-our $VERSION = '1.0';
+our $VERSION = '1.1';
 
 sub get_column_type
 {
@@ -409,7 +409,7 @@ sub insert
 			my $question_marks = join ',', map { '?' } 1..@keys;
 			$self->execute (sprintf ('INSERT %s INTO %s (%s) VALUES (%s)',
 				$upserttext, $self->{dbh}->quote ($table_name),
-				join (',', @keys),
+				join (',', map { $self->{dbh}->quote($_) } @keys),
 				$question_marks), @values);
 		} else {
 			$self->execute (sprintf 'INSERT %s INTO %s DEFAULT VALUES',
@@ -549,9 +549,7 @@ sub drop
 
 =head1 BUGS
 
-We make use of C<AutoCommit> in L<DBI>, which does not work properly with 
-L<DBD::SQLite> locking on BSDs. Set C<auto_commit> to 0 there and call
-C<commit> explicitely, or avoid BSDs.
+None known.
 
 =head1 SEE ALSO
 
