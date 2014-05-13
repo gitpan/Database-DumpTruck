@@ -80,7 +80,7 @@ use B;
 use JSON;
 require DBD::SQLite;
 
-our $VERSION = '1.1';
+our $VERSION = '1.2';
 
 sub get_column_type
 {
@@ -563,6 +563,8 @@ heavily inspired by.
 =back
 
 =head1 COPYRIGHT
+
+Copyright 2014, Lubomir Rintel
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
